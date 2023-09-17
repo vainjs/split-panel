@@ -27,6 +27,9 @@ devDependencies:
   '@types/jest':
     specifier: ^29.5.0
     version: registry.npmmirror.com/@types/jest@29.5.0
+  '@types/lodash':
+    specifier: ^4.14.198
+    version: registry.npmmirror.com/@types/lodash@4.14.198
   '@types/node':
     specifier: ^18.15.11
     version: registry.npmmirror.com/@types/node@18.15.11
@@ -42,6 +45,9 @@ devDependencies:
   '@vitejs/plugin-react':
     specifier: ^4.0.4
     version: registry.npmmirror.com/@vitejs/plugin-react@4.0.4(vite@4.4.9)
+  classnames:
+    specifier: ^2.3.2
+    version: registry.npmmirror.com/classnames@2.3.2
   eslint:
     specifier: ^8.48.0
     version: registry.npmmirror.com/eslint@8.48.0
@@ -72,6 +78,9 @@ devDependencies:
   lint-staged:
     specifier: ^13.2.1
     version: registry.npmmirror.com/lint-staged@13.2.1
+  lodash:
+    specifier: ^4.17.21
+    version: registry.npmmirror.com/lodash@4.17.21
   prettier:
     specifier: ^3.0.3
     version: registry.npmmirror.com/prettier@3.0.3
@@ -1710,6 +1719,12 @@ packages:
     version: 0.0.29
     dev: true
 
+  registry.npmmirror.com/@types/lodash@4.14.198:
+    resolution: {integrity: sha512-trNJ/vtMZYMLhfN45uLq4ShQSw0/S7xCTLLVM+WM1rmFpba/VS42jVUgaO3w/NOLiWR/09lnYk0yMaA/atdIsg==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/lodash/-/lodash-4.14.198.tgz}
+    name: '@types/lodash'
+    version: 4.14.198
+    dev: true
+
   registry.npmmirror.com/@types/minimist@1.2.2:
     resolution: {integrity: sha512-jhuKLIRrhvCPLqwPcx6INqmKeiA5EWrsCOPhrlFSrbrmU4ZMPjj5Ul/oLCMDO98XRUIwVm78xICz4EPCektzeQ==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/@types/minimist/-/minimist-1.2.2.tgz}
     name: '@types/minimist'
@@ -2571,6 +2586,12 @@ packages:
     resolution: {integrity: sha512-0TNiGstbQmCFwt4akjjBg5pLRTSyj/PkWQ1ZoO2zntmg9yLqSRxwEa4iCfQLGjqhiqBfOJa7W/E8wfGrTDmlZQ==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/cjs-module-lexer/-/cjs-module-lexer-1.2.3.tgz}
     name: cjs-module-lexer
     version: 1.2.3
+    dev: true
+
+  registry.npmmirror.com/classnames@2.3.2:
+    resolution: {integrity: sha512-CSbhY4cFEJRe6/GQzIk5qXZ4Jeg5pcsP7b5peFSDpffpe1cqjASH/n9UTjBwOp6XpMSTwQ8Za2K5V02ueA7Tmw==, registry: http://registry.npm.taobao.org/, tarball: https://registry.npmmirror.com/classnames/-/classnames-2.3.2.tgz}
+    name: classnames
+    version: 2.3.2
     dev: true
 
   registry.npmmirror.com/clean-stack@2.2.0:
