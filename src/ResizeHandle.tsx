@@ -1,4 +1,5 @@
 import type {
+  PanelResizeHandleProps,
   ReactMouseEvent,
   CSSProperties,
   ResizeHandle,
@@ -14,20 +15,22 @@ import {
   useEffect,
   useRef,
   useCallback,
+  useState,
 } from 'react'
 import { values, some } from 'lodash'
-import classNames from 'classnames'
 import { getCursorStyle, setIframeEventStyle } from './utils'
 import { PanelGroupContext } from './GroupContext'
 
-export type PanelResizeHandleProps = {
-  style?: CSSProperties
-  className?: string
-  disabled?: boolean
-}
-
 const PanelResizeHandle: FC<PanelResizeHandleProps> = (props) => {
-  const { style, className, disabled } = props
+  const {
+    highlightSize = 1,
+    triggerSize = 6,
+    highlightColor,
+    hoverable,
+    className,
+    disabled,
+    style,
+  } = props
   const {
     registerResizeHandle,
     onStartDragging,
@@ -38,21 +41,23 @@ const PanelResizeHandle: FC<PanelResizeHandleProps> = (props) => {
   } = useContext(PanelGroupContext)
   const resizeHandleRef = useRef<ResizeHandle | null>(null)
   const handleDomRef = useRef<HTMLDivElement>(null)
+  const [isHover, setHover] = useState(false)
   const handleId = useId()
   const isDragging = activeHandleId === handleId
 
   const onMouseDown = useCallback(
     (event: ReactMouseEvent) => {
-      onStartDragging(handleId, event.nativeEvent)
+      if (!handleDomRef.current) return
+      onStartDragging(handleId, event.nativeEvent, handleDomRef.current)
       setIframeEventStyle('none')
     },
     [onStartDragging, handleId]
   )
 
   const onMouseUp = useCallback(() => {
-    onStopDragging()
+    onStopDragging(handleId)
     setIframeEventStyle('auto')
-  }, [onStopDragging])
+  }, [onStopDragging, handleId])
 
   useEffect(() => {
     if (disabled) {
@@ -63,58 +68,101 @@ const PanelResizeHandle: FC<PanelResizeHandleProps> = (props) => {
   }, [registerResizeHandle, disabled, handleId])
 
   useEffect(() => {
-    if (
-      disabled ||
-      !handleDomRef.current ||
-      !resizeHandleRef.current ||
-      !isDragging
-    )
-      return
+    if (disabled || !handleDomRef.current || !resizeHandleRef.current) return
     const targetDocument = handleDomRef.current.ownerDocument
-
+    const controller = new AbortController()
     const onMove = (event: ResizeEvent) => {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       resizeHandleRef.current!(event, handleDomRef.current as HTMLDivElement)
     }
 
-    targetDocument.addEventListener('mousemove', onMove)
-    targetDocument.addEventListener('touchmove', onMove)
-    targetDocument.addEventListener('mouseup', onMouseUp)
+    targetDocument.addEventListener('mousemove', onMove, {
+      signal: controller.signal,
+    })
+    targetDocument.addEventListener('touchmove', onMove, {
+      signal: controller.signal,
+    })
+    targetDocument.addEventListener('mouseup', onMouseUp, {
+      signal: controller.signal,
+    })
 
     return () => {
-      targetDocument.removeEventListener('mousemove', onMove)
-      targetDocument.removeEventListener('touchmove', onMove)
-      targetDocument.removeEventListener('mouseup', onMouseUp)
+      controller.abort()
     }
-  }, [disabled, isDragging, onMouseUp])
+  }, [disabled, onMouseUp])
 
-  const actualStyle = useMemo(() => {
-    const collapsibled = some(values(sizes), (v) => v === 0)
+  useEffect(() => {
+    if (disabled || !handleDomRef.current || !hoverable) return
+    const controller = new AbortController()
+    handleDomRef.current.addEventListener(
+      'mouseenter',
+      () => {
+        setHover(true)
+      },
+      { signal: controller.signal }
+    )
+    handleDomRef.current.addEventListener(
+      'mouseleave',
+      () => {
+        setHover(false)
+      },
+      { signal: controller.signal }
+    )
+
+    return () => {
+      controller.abort()
+    }
+  }, [disabled, hoverable])
+
+  const actualSize = useMemo(() => {
+    if (direction === 'horizontal') {
+      return {
+        width: highlightSize + triggerSize * 2,
+        margin: `0 -${triggerSize}px`,
+        padding: `0 ${triggerSize}px`,
+      }
+    }
+    if (direction === 'vertical') {
+      return {
+        height: highlightSize + triggerSize * 2,
+        margin: `-${triggerSize}px 0`,
+        padding: `${triggerSize}px 0`,
+      }
+    }
+  }, [highlightSize, triggerSize, direction])
+
+  const actualStyle: CSSProperties = useMemo(() => {
+    const collapsibled = some(values(sizes), ([v]) => v === 0)
     const cursorState: CursorState = collapsibled
       ? `${direction}-collapsibled`
       : direction
 
     return {
+      ...actualSize,
       ...{
-        width: 11,
-        margin: '0 -5px',
+        backgroundColor:
+          (isDragging || isHover) && highlightColor
+            ? highlightColor
+            : undefined,
         cursor: getCursorStyle(cursorState),
-        touchAction: 'none' as const,
-        userSelect: 'none' as const,
-        zIndex: 1,
+        backgroundClip: 'content-box',
+        boxSizing: 'border-box',
+        touchAction: 'none',
+        userSelect: 'none',
+        zIndex: 9,
       },
       ...style,
     }
-  }, [style, sizes, direction])
+  }, [style, sizes, direction, actualSize, highlightColor, isDragging, isHover])
 
   return (
     <div
-      className={classNames('split-panel-resize-handle', className)}
+      data-panel-handle-active={isDragging ? true : undefined}
       data-panel-handle-id={handleId}
       onMouseDown={onMouseDown}
       onTouchCancel={onMouseUp}
       onTouchEnd={onMouseUp}
       onMouseUp={onMouseUp}
+      className={className}
       style={actualStyle}
       ref={handleDomRef}
     />

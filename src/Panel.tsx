@@ -1,22 +1,31 @@
-import type { FC, PanelData, PanelProps } from './type'
-import { memo, useEffect, useId, useContext, useRef, useMemo } from 'react'
+import type { PanelData, PanelProps, PanelRef } from './type'
+import {
+  useImperativeHandle,
+  useContext,
+  forwardRef,
+  useEffect,
+  useMemo,
+  useRef,
+  useId,
+  memo,
+} from 'react'
 import { PanelGroupContext } from './GroupContext'
 
-const Panel: FC<PanelProps> = (props) => {
+const Panel = forwardRef<PanelRef, PanelProps>((props, ref) => {
   const {
-    collapsedSize = 20,
+    collapsedSize = 10,
     collapsible,
+    className,
     onResize,
     children,
     minSize,
     maxSize,
     style,
-    key,
   } = props
-  const { sizes, registerPanel, unregisterPanel } =
+  const { sizes, registerPanel, unregisterPanel, resize } =
     useContext(PanelGroupContext)
   const panelId = useId()
-  const flexGrow = sizes[panelId]
+  const [, flexGrow] = sizes[panelId] || []
 
   const panelDataRef = useRef<PanelData>({
     collapsedSize,
@@ -26,9 +35,23 @@ const Panel: FC<PanelProps> = (props) => {
     maxSize,
   })
 
+  useImperativeHandle(
+    ref,
+    () => ({
+      collapse() {
+        if (collapsible) {
+          resize(panelId, 0)
+        }
+      },
+      resize(size: number | string) {
+        resize(panelId, size)
+      },
+    }),
+    [collapsible, panelId, resize]
+  )
+
   useEffect(() => {
     registerPanel(panelId, panelDataRef)
-
     return () => {
       unregisterPanel(panelId)
     }
@@ -36,9 +59,9 @@ const Panel: FC<PanelProps> = (props) => {
 
   useEffect(() => {
     if (onResize) {
-      onResize(flexGrow === 0, key)
+      onResize(flexGrow === 0)
     }
-  }, [flexGrow, key, onResize])
+  }, [flexGrow, onResize])
 
   const actualStyle = useMemo(() => {
     if (flexGrow === undefined) {
@@ -59,13 +82,11 @@ const Panel: FC<PanelProps> = (props) => {
     }
   }, [flexGrow, style])
 
-  console.log('===========', actualStyle)
-
   return (
-    <div style={actualStyle} data-panel-id={panelId} key={key}>
+    <div style={actualStyle} data-panel-id={panelId} className={className}>
       {children}
     </div>
   )
-}
+})
 
 export default memo(Panel)

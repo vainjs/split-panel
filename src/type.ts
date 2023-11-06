@@ -1,11 +1,4 @@
-import type {
-  MutableRefObject,
-  SetStateAction,
-  CSSProperties,
-  ReactNode,
-  Dispatch,
-  Key,
-} from 'react'
+import type { MutableRefObject, CSSProperties, ReactNode } from 'react'
 
 export type {
   MouseEvent as ReactMouseEvent,
@@ -23,14 +16,19 @@ export type ResizeEvent = KeyboardEvent | MouseEvent | TouchEvent
 export type ResizeHandle = (event: ResizeEvent, handle: HTMLDivElement) => void
 
 export type PanelProps = {
-  onResize?: (collapsed: boolean, key?: Key) => void
+  onResize?: (collapsed: boolean) => void
   collapsedSize?: number
   collapsible?: boolean
   style?: CSSProperties
   children?: ReactNode
+  className?: string
   minSize?: number
   maxSize?: number
-  key?: Key
+}
+
+export type PanelRef = {
+  resize: (size: number | string) => void
+  collapse: () => void
 }
 
 export type PanelData = Omit<PanelProps, 'style' | 'children'>
@@ -47,17 +45,24 @@ export type CursorState =
   | 'horizontal'
   | 'vertical'
 
-export type PanelSizes = Record<string, number>
+/**
+ * [size, flexSize]
+ */
+export type PanelSizes = Record<string, [number, number]>
 
 export type InitHandleState = { correctOffset?: number }
 
 export type PanelGroupContextProps = {
-  onStartDragging: (id: string, event: ResizeEvent) => void
-  registerPanel: (id: string, panel: PanelDataRef) => void
-  registerResizeHandle: (id: string) => ResizeHandle
-  setSizes: Dispatch<SetStateAction<PanelSizes>>
-  unregisterPanel: (id: string) => void
-  onStopDragging: () => void
+  onStartDragging: (
+    handleId: string,
+    event: ResizeEvent,
+    handle: HTMLDivElement
+  ) => void
+  registerPanel: (panelId: string, panel: PanelDataRef) => void
+  registerResizeHandle: (handleId: string) => ResizeHandle
+  resize: (panelId: string, size: number | string) => void
+  unregisterPanel: (panelId: string) => void
+  onStopDragging: (handleId: string) => void
   activeHandleId: string | null
   direction: Direction
   sizes: PanelSizes
@@ -72,4 +77,14 @@ export type PanelGroupProps = {
 
 export type PanelGroupRef = {
   reset(): void
+}
+
+export type PanelResizeHandleProps = {
+  style?: CSSProperties
+  highlightColor?: string
+  highlightSize?: number
+  triggerSize?: number
+  hoverable?: boolean
+  className?: string
+  disabled?: boolean
 }

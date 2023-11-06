@@ -19,8 +19,10 @@ import {
 } from 'react'
 import {
   getPrevAndNextResultByHandle,
+  getActualPanelSize,
   isMouseEvent,
   getMovement,
+  getSize,
 } from './utils'
 import { PanelGroupContext } from './GroupContext'
 
@@ -44,10 +46,10 @@ const PanelGroup = forwardRef<PanelGroupRef, PanelGroupProps>((props, ref) => {
   )
 
   const registerResizeHandle = useCallback(
-    (handId: string) => {
+    (handleId: string) => {
       return (e: ResizeEvent, handle: HTMLDivElement) => {
         e.preventDefault()
-        if (!activeHandleId || activeHandleId !== handId || !groupRef.current)
+        if (!activeHandleId || activeHandleId !== handleId || !groupRef.current)
           return
         const movement = getMovement(
           e,
@@ -85,20 +87,50 @@ const PanelGroup = forwardRef<PanelGroupRef, PanelGroupProps>((props, ref) => {
     }
   }, [])
 
-  const onStartDragging = useCallback((handId: string, event: ResizeEvent) => {
-    setActiveHandleId(handId)
-    if (isMouseEvent(event)) {
-      const resizeHandle = event.target as HTMLDivElement
-      initHandleStateRef.current = {
-        correctOffset:
-          event.clientX - resizeHandle.getBoundingClientRect().left,
+  const onStartDragging = useCallback(
+    (handleId: string, event: ResizeEvent, handle: HTMLDivElement) => {
+      setActiveHandleId(handleId)
+      if (isMouseEvent(event)) {
+        initHandleStateRef.current = {
+          correctOffset: event.clientX - handle.getBoundingClientRect().left,
+        }
       }
-    }
-  }, [])
+    },
+    []
+  )
 
   const onStopDragging = useCallback(() => {
     setActiveHandleId(null)
+    setSizes((prev) => {
+      const newPanelSizes: PanelSizes = {}
+      for (const panelId in prev) {
+        if (Object.prototype.hasOwnProperty.call(prev, panelId)) {
+          const panelDataRef = panels.current.get(panelId)
+          if (!panelDataRef) continue
+          const { collapsedSize = 0, collapsible } = panelDataRef.current || {}
+          const [actualSize] = prev[panelId]
+          if (collapsible && actualSize <= collapsedSize) {
+            newPanelSizes[panelId] = [0, 0]
+          }
+        }
+      }
+      return { ...prev, ...newPanelSizes }
+    })
   }, [])
+
+  const resize = useCallback(
+    (panelId: string, size: number | string) => {
+      const baseSize = getSize(groupRef.current!, direction)
+      if (size === 'auto') {
+        size = baseSize
+      }
+      setSizes((prev) => ({
+        ...prev,
+        ...getActualPanelSize(panelId, size as number, baseSize, panels),
+      }))
+    },
+    [direction]
+  )
 
   const contextValue = useMemo(
     () => ({
@@ -109,7 +141,7 @@ const PanelGroup = forwardRef<PanelGroupRef, PanelGroupProps>((props, ref) => {
       registerPanel,
       activeHandleId,
       direction,
-      setSizes,
+      resize,
       sizes,
     }),
     [
@@ -120,7 +152,7 @@ const PanelGroup = forwardRef<PanelGroupRef, PanelGroupProps>((props, ref) => {
       registerPanel,
       activeHandleId,
       direction,
-      setSizes,
+      resize,
       sizes,
     ]
   )

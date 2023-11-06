@@ -1,11 +1,12 @@
 import type {
-  Direction,
-  ResizeEvent,
-  PanelsRef,
-  CursorState,
   CSSProperties,
+  CursorState,
+  ResizeEvent,
+  PanelSizes,
+  Direction,
+  PanelsRef,
 } from './type'
-import { startsWith, get, forEach } from 'lodash'
+import { startsWith, get, forEach, isNil, isString } from 'lodash'
 
 export function isMouseEvent(event: ResizeEvent): event is MouseEvent {
   return startsWith(event.type, 'mouse')
@@ -37,27 +38,39 @@ export function getSize(dom: HTMLDivElement, direction: Direction) {
   return direction === 'horizontal' ? rect.width : rect.height
 }
 
-function getActualPanelInfo(
-  dom: HTMLDivElement,
+function getFlexSize(actualSize: number, baseSize: number) {
+  return (actualSize / baseSize) * 100
+}
+
+export function calculateSize(
+  panelId: string,
   size: number,
   panels: PanelsRef
-): [string, number] {
-  const panelId = dom.getAttribute('data-panel-id') as string
-  const panelData = get(panels.current.get(panelId), 'current')
-  if (!panelData) return [panelId, size]
-
+) {
+  const panelData = get(panels.current.get(panelId), 'current') || {}
+  const { minSize, maxSize } = panelData
   let actualSize = size
-  const { minSize, maxSize, collapsible, collapsedSize = 0 } = panelData
-  if (minSize) {
+  if (!isNil(minSize)) {
     actualSize = Math.max(actualSize, minSize)
   }
-  if (maxSize) {
+  if (!isNil(maxSize)) {
     actualSize = Math.min(actualSize, maxSize)
   }
-  if (collapsible && size <= collapsedSize) {
-    actualSize = 0
-  }
-  return [panelId, actualSize]
+  return actualSize
+}
+
+export function getActualPanelSize(
+  panelId: HTMLDivElement | string,
+  size: number,
+  baseSize: number,
+  panels: PanelsRef
+): PanelSizes {
+  panelId = isString(panelId)
+    ? panelId
+    : (panelId.getAttribute('data-panel-id') as string)
+  const actualSize = calculateSize(panelId, size, panels)
+  const flexSize = getFlexSize(actualSize, baseSize)
+  return { [panelId]: [actualSize, flexSize] }
 }
 
 export function getPrevAndNextResultByHandle(
@@ -66,27 +79,27 @@ export function getPrevAndNextResultByHandle(
   movement: number,
   direction: Direction,
   panels: PanelsRef
-) {
+): PanelSizes | undefined {
   const prev = handle.previousSibling as HTMLDivElement
   const next = handle.nextSibling as HTMLDivElement
   if (!prev || !next) return
   const baseSize = getSize(group, direction)
   const prevSize = getSize(prev, direction)
   const nextSize = getSize(next, direction)
-  const [prevId, prevActualSize] = getActualPanelInfo(
-    prev,
-    prevSize + movement,
-    panels
-  )
-  const [nextId, nextActualSize] = getActualPanelInfo(
-    next,
-    nextSize - movement,
-    panels
-  )
+
+  let prevNewSize = prevSize + movement
+  let nextNewSize = nextSize - movement
+  if (prevNewSize <= 0) {
+    nextNewSize += prevNewSize
+    prevNewSize = 0
+  } else if (nextNewSize <= 0) {
+    prevNewSize += nextNewSize
+    nextNewSize = 0
+  }
 
   return {
-    [prevId]: (prevActualSize / baseSize) * 100,
-    [nextId]: (nextActualSize / baseSize) * 100,
+    ...getActualPanelSize(prev, prevNewSize, baseSize, panels),
+    ...getActualPanelSize(next, nextNewSize, baseSize, panels),
   }
 }
 
@@ -111,4 +124,8 @@ export function setIframeEventStyle(
       iframe.style.setProperty('pointer-events', pointerEvents)
     }
   })
+}
+
+export function getResizeHandle(id: string): HTMLDivElement | null {
+  return document.querySelector(`[data-panel-handle-id="${id}"]`)
 }
